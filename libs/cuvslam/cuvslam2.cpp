@@ -178,7 +178,9 @@ void CreateCameraModel(const Camera& camera, std::unique_ptr<camera::ICameraMode
 }
 
 void SetTrackerRigAndIntrinsics(std::vector<std::unique_ptr<camera::ICameraModel>>& cameras_models,
-                                camera::Rig& internal_rig, const std::vector<Camera>& cameras) {
+                                camera::Rig& internal_rig, const cuvslam::Rig& rig) {
+  const auto& cameras = rig.cameras;
+  internal_rig.min_landmark_depth = rig.min_landmark_depth;
   internal_rig.num_cameras = cameras.size();
   cameras_models.resize(cameras.size());
 
@@ -193,6 +195,8 @@ void SetTrackerRigAndIntrinsics(std::vector<std::unique_ptr<camera::ICameraModel
 }
 
 void CheckCameras(const cuvslam::Rig& rig) {
+  THROW_INVALID_ARG_IF(!std::isfinite(rig.min_landmark_depth) || rig.min_landmark_depth <= 0.f,
+                       "Rig::min_landmark_depth must be finite and positive");
   THROW_INVALID_ARG_IF(rig.cameras.empty(), "No cameras in a rig");
   THROW_INVALID_ARG_IF(rig.cameras.size() > camera::Rig::kMaxCameras, "Number of cameras limit exceeded");
   for (const auto& cam : rig.cameras) {
@@ -567,6 +571,9 @@ Odometry::Odometry(const Rig& rig, const Config& cfg) {
   std::string message;
   TracePrintIf(cfg.use_gpu && !CheckCudaCompatibility(message), "[WARNING] %s\n", message.c_str());
   CheckCameras(rig);
+  THROW_INVALID_ARG_IF(rig.min_landmark_depth != Rig{}.min_landmark_depth &&
+                           (cfg.odometry_mode == OdometryMode::Mono || cfg.odometry_mode == OdometryMode::Multisensor),
+                       "Custom min_landmark_depth currently supports Multicamera, Inertial and RGBD modes");
 
   THROW_INVALID_ARG_IF(cfg.odometry_mode == OdometryMode::Inertial && rig.imus.empty(),
                        "IMU fusion is enabled, but IMU calibration is not provided");
@@ -601,7 +608,7 @@ Odometry::Odometry(const Rig& rig, const Config& cfg) {
 
   auto tracker{std::make_unique<Odometry::Impl>()};
 
-  SetTrackerRigAndIntrinsics(tracker->cameras_models, tracker->rig, rig.cameras);
+  SetTrackerRigAndIntrinsics(tracker->cameras_models, tracker->rig, rig);
 
   // Build the frustum-intersection graph. Each odometry mode contributes a different depth-camera
   // list and stereo-depth-tracking choice; collect them up front for clarity.
@@ -1089,7 +1096,7 @@ public:
     // Slam can be constructed on its own, so it cannot rely on Odometry having vetted the rig
     CheckCameras(rig);
 
-    SetTrackerRigAndIntrinsics(cameras_models_, rig_, rig.cameras);
+    SetTrackerRigAndIntrinsics(cameras_models_, rig_, rig);
 
     slam::AsyncSlamOptions options;
     options.map_path = config.map_path;

@@ -230,6 +230,11 @@ struct ImuCalibration {
 struct Rig {
   std::vector<Camera> cameras;       ///< Cameras; 1 to 32 cameras are supported now
   std::vector<ImuCalibration> imus;  ///< IMU sensors; 0 or 1 sensor is supported now
+  /// Minimum valid camera-axis landmark depth in meters; finite and positive.
+  /// Shared by odometry and SLAM. Custom values support Multicamera, Inertial and RGBD modes.
+  /// Independent of Odometry::Config::min_depth stereo search guesses. Mono/Multisensor require the default.
+  /// Default: 0.1 m. Set to 0.01 m for close-range stereo or RGB-D tracking.
+  float min_landmark_depth = 0.1f;
 };
 
 /**

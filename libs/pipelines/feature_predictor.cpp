@@ -47,7 +47,7 @@ void FeaturePredictor::predictObservations(const Isometry3T& world_from_rig, int
 
     const Vector3T camPoint = cameraFromWorld * point_3d;
 
-    if (epipolar::IsDepthInFront(camPoint.z())) {
+    if (epipolar::IsDepthInFront(camPoint.z(), rig_.min_landmark_depth)) {
       // Project into the camera (OpenCV +Z forward). "denormalize" = project to pixels, "normalize" = unproject.
       Vector2T xy(camPoint.x() / camPoint.z(), camPoint.y() / camPoint.z());
       Vector2T uv;

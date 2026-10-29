@@ -22,6 +22,7 @@
 #include "common/include_gtest.h"
 #include "map/map.h"
 #include "pipelines/service_sba.h"
+#include "pipelines/triangulator.h"
 
 namespace test {
 using namespace cuvslam;
@@ -175,6 +176,35 @@ TEST(ServiceSbaTest, ImuSbaToleratesConcurrentTriangulation) {
           << "trial " << trial;
     }
     ExpectConsistentProblem(bundler);
+  }
+}
+
+TEST(StereoNearDepth, TriangulationUsesTheRigDepthCutoff) {
+  camera::PinholeCameraModel cam({640.f, 480.f}, {320.f, 320.f}, {320.f, 240.f});
+  camera::Rig close;
+  close.num_cameras = 2;
+  close.min_landmark_depth = 0.01f;
+  close.intrinsics[0] = close.intrinsics[1] = &cam;
+  close.camera_from_rig[0] = Isometry3T::Identity();
+  close.camera_from_rig[1] = Isometry3T::Identity();
+  close.camera_from_rig[1].translation().x() = -0.004f;
+  camera::Rig copied;
+  copied = close;
+  EXPECT_FLOAT_EQ(copied.min_landmark_depth, 0.01f);
+  camera::Rig normal = copied;
+  normal.min_landmark_depth = 0.1f;
+  const std::vector<camera::Observation> observations{
+      {CameraId{0}, TrackId{7}, Vector2T::Zero(), Matrix2T::Identity()},
+      {CameraId{1}, TrackId{7}, Vector2T(-0.08f, 0.f), Matrix2T::Identity()}};
+  for (const auto* rig : {&copied, &normal, &copied}) {
+    pipelines::MulticamTriangulator triangulator(*rig);
+    const auto points = triangulator.triangulate(Isometry3T::Identity(), observations);
+    if (rig->min_landmark_depth < 0.05f) {
+      ASSERT_EQ(points.size(), 1u);
+      EXPECT_NEAR(points[0].point_w.z(), 0.05f, 1e-5f);
+    } else {
+      EXPECT_TRUE(points.empty());
+    }
   }
 }
 

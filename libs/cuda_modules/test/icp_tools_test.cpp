@@ -130,4 +130,37 @@ TEST(Cuda, IcpToolsReportsNoResidualsWithoutTracks) {
   EXPECT_FALSE(have_residuals);
 }
 
+TEST(Cuda, IcpToolsUsesTheRigDepthCutoff) {
+  ConstantDepthLevel level(0.05f);
+  auto tracks = TracksAtPrincipalPoint(16);
+  for (auto& track : tracks) {
+    track.lm_xyz = {0.f, 0.f, 0.05f};
+  }
+  camera::Rig close_rig;
+  close_rig.min_landmark_depth = 0.01f;
+  const cuda::GPUICPTools close_tools(close_rig);
+  const cuda::GPUICPTools default_tools;
+  // Interleave instances to catch accidental process-wide or device-global settings.
+  for (const auto* tools : {&close_tools, &default_tools, &close_tools}) {
+    const bool close = tools == &close_tools;
+    std::vector<Vector3T> lifted;
+    tools->lift_points(level.depth, {kFocal, kFocal}, {kPrincipal, kPrincipal}, tracks, lifted);
+    ASSERT_EQ(lifted.size(), tracks.size());
+    for (const auto& point : lifted) {
+      EXPECT_NEAR(point.z(), close ? 0.05f : 0.f, 1e-6f);
+    }
+    float cost;
+    Vector6T rhs;
+    Matrix6T hessian;
+    const bool valid = tools->match_and_reduce(cost, rhs, hessian, {kFocal, kFocal}, {kPrincipal, kPrincipal},
+                                               level.level(), Isometry3T::Identity(), kHuber, tracks);
+    EXPECT_EQ(valid, close);
+    if (valid) {
+      EXPECT_NEAR(cost, 0.f, 1e-6f);
+      EXPECT_TRUE(rhs.allFinite());
+      EXPECT_TRUE(hessian.allFinite());
+    }
+  }
+}
+
 }  // namespace test

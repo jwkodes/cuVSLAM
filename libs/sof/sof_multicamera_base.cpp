@@ -47,8 +47,8 @@ const EpipolarCurves& MultiSOFBase::GetOrBuildEpipolarCurves(CameraId primary_id
   const camera::ICameraModel& intr_r = *rig_.intrinsics[secondary_id];
   const Isometry3T right_from_left = rig_.camera_from_rig[secondary_id] * rig_.camera_from_rig[primary_id].inverse();
   const auto [inserted_it, inserted] = row.emplace(
-      secondary_id,
-      EpipolarCurves(intr_l, intr_r, right_from_left, top_level, top_width, top_height, min_depth_, max_depth_));
+      secondary_id, EpipolarCurves(intr_l, intr_r, right_from_left, top_level, top_width, top_height,
+                                   EpipolarCurves::DepthRange{min_depth_, max_depth_, rig_.min_landmark_depth}));
   EpipolarCurves& epipolar_curves = inserted_it->second;
   return epipolar_curves;
 }

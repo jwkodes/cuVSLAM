@@ -513,7 +513,8 @@ void ImuFusionContext::run_imu_sba_init(const map::UnifiedMap::SubMap& recent_ma
           Vector3T xyz_in_cam_a;
           float pm;
           epipolar::TriangulationState ts;
-          if (epipolar::OptimalTriangulation(cam_a_from_cam_b, oa.xy, ob.xy, xyz_in_cam_a, pm, ts)) {
+          if (epipolar::OptimalTriangulation(cam_a_from_cam_b, oa.xy, ob.xy, xyz_in_cam_a, pm, ts,
+                                             rig_.min_landmark_depth)) {
             new_point = wfc_a * xyz_in_cam_a;
             triangulated = true;
           }

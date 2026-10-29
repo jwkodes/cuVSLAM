@@ -213,7 +213,7 @@ void LoopClosureSolverSimple::SelectLandmarksCandidates(const LoopClosureTask& t
       const Vector3T point_guess = camera_from_world_guess * xyz;
       // same near plane the triangulator and the visibility test use — a landmark nearer than this
       // was never triangulated, and a failed lookup comes back as the origin, at zero depth
-      if (!epipolar::IsDepthInFront(point_guess.z())) {
+      if (!epipolar::IsDepthInFront(point_guess.z(), rig_.min_landmark_depth)) {
         continue;
       }
       const Vector2T uv_guess_norm = point_guess.topRows(2) / point_guess.z();

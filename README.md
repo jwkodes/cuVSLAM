@@ -13,6 +13,39 @@ cuVSLAM is the library by NVIDIA, providing various Visual Tracking Camera modes
 
 ![Overview](examples/assets/pycuvslam_overview.jpg)
 
+## Close-range landmark depth
+
+This fork exposes `Rig.min_landmark_depth` in C++ and Python. It is the minimum
+valid landmark depth along each camera's +Z axis, in meters. Odometry and SLAM
+copy the same rig setting at construction; changing the input rig afterward does
+not modify an existing tracker. The default remains **0.1 m**.
+
+For close-range stereo, configure both the search guesses and the landmark gate:
+
+```python
+rig = cuvslam.Rig(cameras=cameras, min_landmark_depth=0.01)
+config = cuvslam.Odometry.Config(min_depth=0.01)
+tracker = cuvslam.Tracker(
+    rig, cuvslam.Tracker.Mode.OdometryWithSlamRealtime, odom_config=config
+)
+```
+
+`Odometry.Config.min_depth` is an existing, separate setting: it controls the
+nearest epipolar search guesses, not landmark validity. Its baseline-based
+automatic default is unchanged. For RGB-D, `Rig.min_landmark_depth` also reaches
+the CUDA depth residuals/lifting and the CPU lifted-landmark filter. Depth units
+and calibration translations must be consistent with meters.
+
+The runtime cutoff reaches stereo triangulation, prediction, landmark filtering,
+CPU/GPU bundle adjustment and SLAM visibility checks. It is per instance, not a
+process-wide or CUDA global. Custom values currently support **Multicamera,
+Inertial and RGBD**; Mono and experimental Multisensor require the default.
+Values must be finite and positive. The landmark near plane itself is exclusive:
+landmarks at or behind it are rejected.
+
+Build this fork to use the new argument; an upstream binary wheel does not
+contain it. No learned trackers, matchers or new dependencies are required.
+
 ## Table of Contents
 
 - [Tracking modes](#tracking-modes)

@@ -393,7 +393,7 @@ __global__ void calc_jacobians_kernel(GPUModelFunctionMeta function_meta, GPUBun
   float3 p_c;
   Transform(camera_from_world, p_w.coords, p_c);
 
-  if (cuvslam::epipolar::IsDepthInFront(p_c.z)) {
+  if (cuvslam::epipolar::IsDepthInFront(p_c.z, problem_meta.rig->min_landmark_depth)) {
     float2 prediction = {p_c.x / p_c.z, p_c.y / p_c.z};
     float2 r = {obs.xy.x - prediction.x, obs.xy.y - prediction.y};
 
@@ -666,7 +666,7 @@ __global__ void evaluate_cost_kernel(float *cost, int *num_skipped, GPUBundleAdj
     float3 p_c;
     Transform(cam_poses[camera_id], p_r, p_c);
 
-    if (cuvslam::epipolar::IsDepthInFront(p_c.z)) {
+    if (cuvslam::epipolar::IsDepthInFront(p_c.z, problem.rig->min_landmark_depth)) {
       float2 r = {
           obs.xy.x - p_c.x / p_c.z,
           obs.xy.y - p_c.y / p_c.z,

@@ -159,4 +159,37 @@ TEST(VisualICP, SolveRecoversAPerturbedPose) {
   EXPECT_FALSE(info.isZero());
 }
 
+TEST(VisualICP, LiftTracksUsesTheRigDepthCutoff) {
+  auto cam = MakePinhole();
+  cuda::GaussianGPUImagePyramid image(640, 480);
+  cuda::GPUGradientPyramid gradients(640, 480);
+  const std::vector<camera::Observation> observations{
+      camera::Observation(CameraId{0}, TrackId{7}, Vector2T::Zero(), Matrix2T::Identity())};
+  Isometry3T world_from_rig = Isometry3T::Identity();
+  world_from_rig.translation() = Vector3T(0.1f, 0.2f, 0.3f);
+  for (const float cutoff : {0.1f, 0.01f}) {
+    auto rig = MakeRig(cam);
+    rig.min_landmark_depth = cutoff;
+    const cuvslam::pnp::VisualICP solver(rig);
+    for (const float depth : {0.05f, 1.f, 0.005f, 0.f}) {
+      cuda::GaussianGPUImagePyramid pyramid(640, 480);
+      ImageMatrixT pixels = ImageMatrixT::Constant(480, 640, depth);
+      cuda::GPUImageT device(pixels);
+      cuda::Stream stream;
+      pyramid.build(device, false, stream.get_stream());
+      cudaStreamSynchronize(stream.get_stream());
+      const cuvslam::pnp::IcpInfo info{CameraId{0}, image, gradients, pyramid};
+      std::vector<cuvslam::pipelines::Landmark> landmarks;
+      solver.lift_mono_tracks(info, world_from_rig, observations, landmarks);
+      if (depth > cutoff) {
+        ASSERT_EQ(landmarks.size(), 1u);
+        EXPECT_EQ(landmarks[0].id, TrackId{7});
+        EXPECT_TRUE(landmarks[0].point_w.isApprox(world_from_rig * Vector3T(0.f, 0.f, depth), 1e-5f));
+      } else {
+        EXPECT_TRUE(landmarks.empty());
+      }
+    }
+  }
+}
+
 }  // namespace test::visual_icp

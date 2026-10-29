@@ -35,6 +35,10 @@ constexpr float MINIMUM_HITHER = 0.1f;
 
 /// True when a camera-local depth clears the near plane. Prefer this over a hand-written
 /// comparison so every guard treats the boundary the same way.
-CUVSLAM_NEAR_PLANE_FN bool IsDepthInFront(float z) { return z > FrustumProperties::MINIMUM_HITHER; }
+CUVSLAM_NEAR_PLANE_FN bool IsDepthInFront(float z, float min_depth) { return z > min_depth; }
+
+// Compatibility overload for geometry helpers without a rig. Tracker paths pass
+// the construction-time rig setting explicitly; no global mutable state is used.
+CUVSLAM_NEAR_PLANE_FN bool IsDepthInFront(float z) { return IsDepthInFront(z, FrustumProperties::MINIMUM_HITHER); }
 
 }  // namespace cuvslam::epipolar

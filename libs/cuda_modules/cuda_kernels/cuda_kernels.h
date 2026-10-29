@@ -154,6 +154,7 @@ struct Inctinsics {
 
   int size_x;
   int size_y;
+  float min_landmark_depth = 0.1f;
 };
 
 struct Extrinsics {

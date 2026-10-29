@@ -184,6 +184,14 @@ TEST_F(CameraSelectionTest, CountPointsInFrontOfCameras_MixedPointsInFrontAndBeh
   EXPECT_EQ(expectedCount, actualCount);
 }
 
+TEST(NearPlaneGuard, RuntimeCutoffsAreIndependent) {
+  EXPECT_TRUE(cuvslam::epipolar::IsDepthInFront(0.05f, 0.01f));
+  EXPECT_FALSE(cuvslam::epipolar::IsDepthInFront(0.05f, 0.1f));
+  EXPECT_FALSE(cuvslam::epipolar::IsDepthInFront(0.01f, 0.01f));
+  EXPECT_FALSE(cuvslam::epipolar::IsDepthInFront(-0.05f, 0.01f));
+  EXPECT_FALSE(cuvslam::epipolar::IsDepthInFront(0.05f));
+}
+
 TEST(NearPlaneGuard, IsDepthInFront_TreatsTheBoundaryAsTooClose) {
   const float hither = cuvslam::epipolar::FrustumProperties::MINIMUM_HITHER;
 

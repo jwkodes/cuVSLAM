@@ -77,6 +77,7 @@ struct Rig {
   static constexpr const int kMaxCameras = 32;
   Pose camera_from_rig[kMaxCameras];
   int num_cameras = 0;
+  float min_landmark_depth = 0.1f;
 };
 
 struct GPUBundleAdjustmentProblemMeta {

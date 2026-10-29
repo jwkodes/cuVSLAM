@@ -82,7 +82,8 @@ std::vector<CameraGraphNode> BuildCameraGraph(const camera::Rig& rig) {
           Isometry3T T_i_j = rig.camera_from_rig[cam_id_i] * rig.camera_from_rig[cam_id_j].inverse();
           Vector3T point_d_min_j = T_i_j * point_d_min_i;
           Vector3T point_d_max_j = T_i_j * point_d_max_i;
-          if (!epipolar::IsDepthInFront(point_d_min_j.z()) || !epipolar::IsDepthInFront(point_d_max_j.z())) {
+          if (!epipolar::IsDepthInFront(point_d_min_j.z(), rig.min_landmark_depth) ||
+              !epipolar::IsDepthInFront(point_d_max_j.z(), rig.min_landmark_depth)) {
             continue;
           }
           Vector2T xy_d_min_j = point_d_min_j.topRows(2) / point_d_min_j.z();

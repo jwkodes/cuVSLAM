@@ -422,6 +422,7 @@ void GPUBundleAdjustmentProblem::set_rig(const camera::Rig& rig) {
   Rig cpu_rig;
   meta_.num_cameras = rig.num_cameras;
   cpu_rig.num_cameras = rig.num_cameras;
+  cpu_rig.min_landmark_depth = rig.min_landmark_depth;
   for (int cam = 0; cam < rig.num_cameras; cam++) {
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
