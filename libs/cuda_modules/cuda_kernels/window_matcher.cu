@@ -26,7 +26,6 @@
 #define BLOCK_Y 16
 
 #define RESIDUAL_MAX 5e-1f
-#define D_MIN 0.1f
 #define D_MAX 10.f
 #define GRAD_THRESH 1e-1f
 
@@ -74,7 +73,7 @@ __device__ bool magic_depth(float3 lm_world, const ImgTextures& tex, const Incti
   float3 lm_cam;
   Transform(extr.cam_from_world, lm_world, lm_cam);
 
-  if (lm_cam.z < D_MIN) {
+  if (lm_cam.z < intrinsics.min_landmark_depth) {
     return false;
   }
 
@@ -96,7 +95,7 @@ __device__ bool magic_depth(float3 lm_world, const ImgTextures& tex, const Incti
 
   float dc = dpatch[3 * 1 + 1];
 
-  if (dc < D_MIN) {
+  if (dc < intrinsics.min_landmark_depth) {
     return false;
   }
 
@@ -315,7 +314,7 @@ __device__ bool magic_points(const Track& track, const ImgTextures& tex, const I
   float v = intrinsics.focal_y * track.obs_xy.y + intrinsics.principal_y;
 
   float z = tex2D<float>(tex.curr_depth, u, v);
-  if (z < D_MIN || z > D_MAX) {
+  if (z < intrinsics.min_landmark_depth || z > D_MAX) {
     return false;
   }
 
@@ -543,7 +542,7 @@ __global__ void lift_kernel(cudaTextureObject_t curr_depth, Inctinsics intrinsic
   for (int i = -1; i <= 1; i++) {
     for (int j = -1; j <= 1; j++) {
       float c = tex2D<float>(curr_depth, u + i, v + j);
-      if (c > D_MIN && c < D_MAX) {
+      if (c > intrinsics.min_landmark_depth && c < D_MAX) {
         z += c;
         num += 1.f;
       }

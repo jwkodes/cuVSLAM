@@ -101,10 +101,18 @@ void EpipolarCurves::Candidates(const Vector2T& uv_l_base, std::vector<Vector2T>
 EpipolarCurves::EpipolarCurves(const camera::ICameraModel& cam_l, const camera::ICameraModel& cam_r,
                                const Isometry3T& right_from_left, const int top_level, const size_t top_width,
                                const size_t top_height, float min_depth, float max_depth)
+    : EpipolarCurves(cam_l, cam_r, right_from_left, top_level, top_width, top_height,
+                     DepthRange{min_depth, max_depth}) {}
+
+EpipolarCurves::EpipolarCurves(const camera::ICameraModel& cam_l, const camera::ICameraModel& cam_r,
+                               const Isometry3T& right_from_left, const int top_level, const size_t top_width,
+                               const size_t top_height, const DepthRange& depths)
     : inv_scale_(1.0f / static_cast<float>(1u << top_level)),
       curves_(top_height + 1, std::vector<std::vector<Vector2T>>(top_width + 1)) {
   const auto scale = static_cast<float>(1u << top_level);
 
+  float min_depth = depths.min_depth;
+  float max_depth = depths.max_depth;
   AutoDetectDepthRange(right_from_left.translation().norm(), min_depth, max_depth);
 
   const float log_min = std::log(min_depth);
@@ -135,7 +143,7 @@ EpipolarCurves::EpipolarCurves(const camera::ICameraModel& cam_l, const camera::
       float log_d = log_max;
       for (int s = 0; s < kNumDepthSamples; ++s, log_d -= log_step) {
         const Vector3T p_r = right_from_left * (std::exp(log_d) * ray_l);
-        if (!epipolar::IsDepthInFront(p_r.z())) {
+        if (!epipolar::IsDepthInFront(p_r.z(), depths.min_landmark_depth)) {
           continue;
         }
         Vector2T uv_r_base;

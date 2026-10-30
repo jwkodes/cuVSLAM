@@ -31,9 +31,11 @@ struct Rig {
   Isometry3T camera_from_rig[kMaxCameras];
   const ICameraModel* intrinsics[kMaxCameras]{};  // somebody else owns this pointer
   int32_t num_cameras{0};
+  float min_landmark_depth = 0.1f;
 
   Rig& operator=(const Rig& rhs) {
     num_cameras = rhs.num_cameras;
+    min_landmark_depth = rhs.min_landmark_depth;
     for (int i = 0; i < rhs.num_cameras; ++i) {
       camera_from_rig[i] = rhs.camera_from_rig[i];
       intrinsics[i] = rhs.intrinsics[i];

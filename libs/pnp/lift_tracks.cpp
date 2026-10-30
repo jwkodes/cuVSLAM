@@ -54,7 +54,7 @@ void VisualICP::lift_mono_tracks(const IcpInfo& inputs, const Isometry3T& world_
   for (size_t i = 0; i < lifted_landmarks_.size(); i++) {
     const auto& obs = observations[i];
     const Vector3T& lm = lifted_landmarks_[i];
-    if (lm.z() > 1e-1f) {
+    if (epipolar::IsDepthInFront(lm.z(), rig_.min_landmark_depth)) {
       landmarks.push_back({obs.id, world_from_depth * lm});
     }
   }

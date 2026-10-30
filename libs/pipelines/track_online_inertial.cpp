@@ -133,7 +133,8 @@ static void RunImuSbaInit(const map::UnifiedMap::SubMap& recent_map, const Vecto
           Vector3T xyz_in_cam_a;
           float pm;
           epipolar::TriangulationState ts;
-          if (epipolar::OptimalTriangulation(cam_a_from_cam_b, oa.xy, ob.xy, xyz_in_cam_a, pm, ts)) {
+          if (epipolar::OptimalTriangulation(cam_a_from_cam_b, oa.xy, ob.xy, xyz_in_cam_a, pm, ts,
+                                             rig.min_landmark_depth)) {
             new_point = wfc_a * xyz_in_cam_a;
             triangulated = true;
             retriang_count++;

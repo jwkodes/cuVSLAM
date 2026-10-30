@@ -18,6 +18,16 @@ import cuvslam as vslam
 
 
 class TestBindings(unittest.TestCase):
+    def test_rig_landmark_depth(self):
+        self.assertAlmostEqual(vslam.Rig().min_landmark_depth, 0.1)
+        rig = vslam.Rig(min_landmark_depth=0.01)
+        self.assertAlmostEqual(rig.min_landmark_depth, 0.01)
+        rig.min_landmark_depth = 0.02
+        self.assertAlmostEqual(rig.min_landmark_depth, 0.02)
+        self.assertIn("min_landmark_depth", repr(rig))
+        # The old two-argument constructor remains supported.
+        self.assertAlmostEqual(vslam.Rig([], []).min_landmark_depth, 0.1)
+
     def test_version(self):
         ver, major, minor, patch = vslam.get_version()
         self.assertIsInstance(ver, str)

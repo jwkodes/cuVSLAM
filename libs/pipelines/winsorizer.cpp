@@ -45,7 +45,7 @@ void winsorize(const camera::Rig& rig, const std::vector<KeyframeLandmarkObs>& o
     Isometry3T rig_from_w = obs.keyframe->get_pose();
     Vector3T point = *obs.landmark->get_pose();
     const Vector3T pos = cam_from_rig * rig_from_w * point;
-    if (!epipolar::IsDepthInFront(pos.z())) {
+    if (!epipolar::IsDepthInFront(pos.z(), rig.min_landmark_depth)) {
       continue;
     }
 

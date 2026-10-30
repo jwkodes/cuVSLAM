@@ -40,6 +40,16 @@ namespace cuvslam::sof {
 // across it, which is the per-corner dedup above and harmless to the scan. Worst near the borders.
 class EpipolarCurves {
 public:
+  struct DepthRange {
+    float min_depth;
+    float max_depth;
+    float min_landmark_depth = 0.1f;
+  };
+
+  EpipolarCurves(const camera::ICameraModel& cam_l, const camera::ICameraModel& cam_r,
+                 const Isometry3T& right_from_left, int top_level, size_t top_width, size_t top_height,
+                 const DepthRange& depths);
+
   // `min_depth` / `max_depth` — the depth range (meters) sampled along the epipolar curve.
   // Any negative value (e.g. -1) auto-detects from the pair's baseline; see
   // `Odometry::Config::min_depth` in the public API for the auto-detection anchors.

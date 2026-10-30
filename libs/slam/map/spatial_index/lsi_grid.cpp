@@ -34,11 +34,11 @@ namespace {
 using namespace cuvslam;
 
 bool IsLandmarkInFrustum(const camera::ICameraModel& intrinsics, const Isometry3T& cam_from_world,
-                         const Vector3T& landmark_xyz) {
+                         const Vector3T& landmark_xyz, const camera::Rig& rig) {
   const Vector3T point = cam_from_world * landmark_xyz;
 
   // Behind camera or too close for stable projection (+Z forward, OpenCV).
-  if (!epipolar::IsDepthInFront(point.z())) {
+  if (!epipolar::IsDepthInFront(point.z(), rig.min_landmark_depth)) {
     return false;
   }
 
@@ -74,7 +74,7 @@ bool IsLandmarkInAnyFrustum(const camera::Rig& rig, const std::vector<CameraId>&
   for (const CameraId cam_id : cam_ids) {
     const camera::ICameraModel& intrinsics = *rig.intrinsics[cam_id];
     const Isometry3T& cam_from_world = cams_from_world.at(cam_id);
-    if (IsLandmarkInFrustum(intrinsics, cam_from_world, landmark_xyz)) {
+    if (IsLandmarkInFrustum(intrinsics, cam_from_world, landmark_xyz, rig)) {
       return true;
     }
   }

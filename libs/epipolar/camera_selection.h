@@ -134,7 +134,7 @@ inline size_t CountPointsInFrontOfCameras(const Vector2TPairVectorCIt start, con
 // Method below is 'niter' methods from https://e-reports-ext.llnl.gov/pdf/384387.pdf ("Triangulation Made Easy",
 // Listing 3, left column)
 inline bool OptimalTriangulation(const Isometry3T& transform, const Vector2T& x1, const Vector2T& x2, Vector3T& loc3d,
-                                 float& parallelMeasure, TriangulationState& ts) {
+                                 float& parallelMeasure, TriangulationState& ts, float min_depth) {
   ts = TriangulationState::None;
 
   // `transform` is cam1_from_cam2 (same as rig: camera_from_rig[c1]*camera_from_rig[c2].inverse()): p_c1 = T * p_c2.
@@ -231,12 +231,18 @@ inline bool OptimalTriangulation(const Isometry3T& transform, const Vector2T& x1
   //(void)atInfinity;
   // assert((loc3d / scaleFactor).norm() < atInfinity / scaleFactor);
 
-  ts = (IsDepthInFront(loc3d.z()) && IsPointInFrontInLocalSpace(loc3d, transform.inverse()) && loc3d.norm() > epsilon())
+  ts = (IsDepthInFront(loc3d.z(), min_depth) && IsDepthInFront((transform.inverse() * loc3d).z(), min_depth) &&
+        loc3d.norm() > epsilon())
            ? ((IsVectorsParallel(x1m, rotation * x2m, parallelMeasure)) ? TriangulationState::AlmostParallel
                                                                         : TriangulationState::Triangulated)
            : TriangulationState::None;
 
   return (ts != TriangulationState::None);
+}
+
+inline bool OptimalTriangulation(const Isometry3T& transform, const Vector2T& x1, const Vector2T& x2, Vector3T& loc3d,
+                                 float& parallelMeasure, TriangulationState& ts) {
+  return OptimalTriangulation(transform, x1, x2, loc3d, parallelMeasure, ts, FrustumProperties::MINIMUM_HITHER);
 }
 
 // @TODO: need to find better home for this class

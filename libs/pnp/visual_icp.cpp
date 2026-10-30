@@ -50,7 +50,7 @@ Mat23 projection_jacobian(const Vector3T& point_3d) {
 }
 }  // namespace
 
-VisualICP::VisualICP(const camera::Rig& rig) : rig_(rig) {
+VisualICP::VisualICP(const camera::Rig& rig) : rig_(rig), icp_tools_(rig) {
   motion_prior_ = Matrix6T::Identity() * 5e-2;
   obs_per_camera_.resize(rig_.num_cameras);
 }
@@ -70,7 +70,9 @@ bool VisualICP::reprojection_cost_and_hessian(float& cost, Matrix6T& H, Vector6T
 
     point_cam = cam_from_world * landmark_world;
 
-    if (point_cam.z() <= point_z_thresh) continue;
+    if (point_cam.z() <= std::min(point_z_thresh, rig_.min_landmark_depth)) {
+      continue;
+    }
 
     count++;
 

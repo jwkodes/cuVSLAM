@@ -127,6 +127,23 @@ private:
   int64_t timestamp_ns_{0};
 };
 
+TEST_F(TrackerTest, InvalidLandmarkDepthIsRejectedByBothComponents) {
+  for (const float cutoff :
+       {0.f, -1.f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
+    Rig invalid = rig;
+    invalid.min_landmark_depth = cutoff;
+    EXPECT_TRUE(RejectedWith(invalid, "min_landmark_depth"));
+    EXPECT_THROW(Slam(invalid, {0}), std::invalid_argument);
+  }
+}
+
+TEST_F(TrackerTest, DefaultAndCloseRangeRigsAreAccepted) {
+  EXPECT_FLOAT_EQ(rig.min_landmark_depth, 0.1f);
+  rig.min_landmark_depth = 0.01f;
+  OfflineConfig cfg = MakeOfflineConfig();
+  EXPECT_NO_THROW((Tracker{rig, Mode::OdometryWithSlamOffline, cfg.odometry, &cfg.slam}));
+}
+
 TEST_F(TrackerTest, OdometryOnlyModeHasNoSlam) {
   Tracker tracker{rig, Mode::OdometryOnlyRealtime};
 

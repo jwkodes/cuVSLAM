@@ -347,12 +347,17 @@ NB_MODULE(pycuvslam, m) {
       });
 
   nb::class_<Rig>(m, "Rig", "Rig consisting of cameras and 0 or 1 IMU sensors")
-      .def(nb::init<const std::vector<Camera>&, const std::vector<ImuCalibration>&>(),
-           nb::arg("cameras") = std::vector<Camera>{}, nb::arg("imus") = std::vector<ImuCalibration>{})
+      .def(nb::init<const std::vector<Camera>&, const std::vector<ImuCalibration>&, float>(),
+           nb::arg("cameras") = std::vector<Camera>{}, nb::arg("imus") = std::vector<ImuCalibration>{},
+           nb::arg("min_landmark_depth") = Rig{}.min_landmark_depth)
+      .def_rw("min_landmark_depth", &Rig::min_landmark_depth,
+              "Minimum camera-axis landmark depth in meters; finite and positive. Default: 0.1 m.")
       .def_rw("cameras", &Rig::cameras, "List of cameras in the rig, see :class:`Camera`")
       .def_rw("imus", &Rig::imus, "List of IMU sensors in the rig (0 or 1 only), see :class:`ImuCalibration`")
-      .def("__repr__",
-           [](const Rig& rig) { return nb::str("cuvslam.Rig(cameras={}, imus={})").format(rig.cameras, rig.imus); });
+      .def("__repr__", [](const Rig& rig) {
+        return nb::str("cuvslam.Rig(cameras={}, imus={}, min_landmark_depth={})")
+            .format(rig.cameras, rig.imus, rig.min_landmark_depth);
+      });
 
   nb::class_<PoseStamped>(m, "PoseStamped", "Pose with timestamp")
       .def(nb::init<>())

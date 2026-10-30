@@ -111,9 +111,7 @@ void GenerateProblem(sba::BundleAdjustmentProblem& problem, const camera::Rig& r
   problem.num_fixed_points = 0;
   problem.num_fixed_key_frames = 1;
 
-  problem.rig.num_cameras = rig.num_cameras;
-  problem.rig.camera_from_rig[0] = rig.camera_from_rig[0];
-  problem.rig.camera_from_rig[1] = rig.camera_from_rig[1];
+  problem.rig = rig;
 }
 
 static camera::Rig MakeDefaultRig() {
@@ -171,9 +169,7 @@ void GenerateFixedDepthProblem(sba::BundleAdjustmentProblem& problem, const came
 
   problem.num_fixed_points = 0;
   problem.num_fixed_key_frames = 1;
-  problem.rig.num_cameras = rig.num_cameras;
-  problem.rig.camera_from_rig[0] = rig.camera_from_rig[0];
-  problem.rig.camera_from_rig[1] = rig.camera_from_rig[1];
+  problem.rig = rig;
 }
 
 cuda::sba::temporary::ReducedSystem to_temporary(
@@ -1358,6 +1354,30 @@ TEST(Cuda, SBASolverConvergesOnExactObservations) {
 // system guarded at MINIMUM_HITHER (0.1). Landmarks in that band reached the bundler, then carried
 // zero weight in the cost and in both Jacobians. These pin the guard where the shared predicate
 // puts it, in the two places the CPU bundler applies it.
+TEST(Cuda, SBARuntimeNearDepthKeepsCpuGpuParity) {
+  for (const float cutoff : {0.1f, 0.01f}) {
+    camera::Rig rig = MakeDefaultRig();
+    rig.min_landmark_depth = cutoff;
+    sba::BundleAdjustmentProblem problem;
+    GenerateFixedDepthProblem(problem, rig, 0.03f, 0.07f);
+    ASSERT_FALSE(problem.observation_xys.empty());
+    ModelFunction model;
+    UpdateModel(model, problem);
+    for (size_t i = 0; i < problem.observation_xys.size(); ++i) {
+      EXPECT_EQ(model.point_jacobians[i].norm() > 0.f, cutoff < 0.03f);
+    }
+    ParameterUpdate update;
+    update.point.resize(problem.points.size(), Vector3T::Zero());
+    update.pose.resize(problem.rig_from_world.size(), Isometry3T::Identity());
+    const float cpu_cost = EvaluateCost(problem, update);
+    sba::SchurComplementBundlerGpu bundler;
+    problem.max_iterations = 10;
+    bundler.solve(problem);
+    EXPECT_EQ(std::isfinite(cpu_cost), cutoff < 0.03f);
+    EXPECT_EQ(std::isfinite(problem.initial_cost), cutoff < 0.03f);
+  }
+}
+
 TEST(Cuda, SBANearFieldObservationsCarryWeightCpu) {
   camera::Rig rig = MakeDefaultRig();
 

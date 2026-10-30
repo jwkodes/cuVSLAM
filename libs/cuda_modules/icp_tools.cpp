@@ -20,7 +20,12 @@
 const float alpha_v = 0.8f;
 
 namespace cuvslam::cuda {
-GPUICPTools::GPUICPTools() : pinned_photometric_(1 + 1 + 6 + 6 * 6), pinned_point_to_point_(1 + 1 + 6 + 6 * 6) {}
+GPUICPTools::GPUICPTools() : GPUICPTools(camera::Rig{}) {}
+
+GPUICPTools::GPUICPTools(const camera::Rig& rig)
+    : min_landmark_depth_(rig.min_landmark_depth),
+      pinned_photometric_(1 + 1 + 6 + 6 * 6),
+      pinned_point_to_point_(1 + 1 + 6 + 6 * 6) {}
 
 bool GPUICPTools::match_and_reduce(float& cost, Vector6T& rhs, Matrix6T& hessian, const Vector2T& focal,
                                    const Vector2T& principal, const Level& level, const Isometry3T& cam_from_world,
@@ -32,7 +37,8 @@ bool GPUICPTools::match_and_reduce(float& cost, Vector6T& rhs, Matrix6T& hessian
                   principal.x(),
                   principal.y(),
                   static_cast<int>(level.curr_depth.cols()),
-                  static_cast<int>(level.curr_depth.rows())};
+                  static_cast<int>(level.curr_depth.rows()),
+                  min_landmark_depth_};
 
   ImgTextures tex{level.curr_depth.get_texture_filter_linear(), level.curr_image.get_texture_filter_linear(),
                   level.curr_grad_x.get_texture_filter_linear(), level.curr_grad_y.get_texture_filter_linear()};
@@ -154,7 +160,8 @@ void GPUICPTools::lift_points(const cuda::GPUImageT& dst_depth, const Vector2T& 
                     principal.x(),
                     principal.y(),
                     static_cast<int>(dst_depth.cols()),
-                    static_cast<int>(dst_depth.rows())};
+                    static_cast<int>(dst_depth.rows()),
+                    min_landmark_depth_};
 
     for (size_t i = 0; i < num_tracks; i++) {
       pinned_tracks_[i] = tracks.at(i);

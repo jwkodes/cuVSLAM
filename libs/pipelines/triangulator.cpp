@@ -68,7 +68,7 @@ std::vector<Landmark> MulticamTriangulator::triangulate(const Isometry3T& world_
       epipolar::TriangulationState ts;
       // measures how orthogonal the rays are (sine of the angle between them)
       float pm;
-      if (epipolar::OptimalTriangulation(cam1_from_cam2, o1.xy, o2.xy, xyz, pm, ts)) {
+      if (epipolar::OptimalTriangulation(cam1_from_cam2, o1.xy, o2.xy, xyz, pm, ts, rig_.min_landmark_depth)) {
         out.push_back({track_id, world_from_cam1 * xyz});
         triangulated_tracks_.insert(track_id);
       }

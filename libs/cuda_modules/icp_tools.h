@@ -39,6 +39,7 @@ struct Level {
 class GPUICPTools {
 public:
   explicit GPUICPTools();
+  explicit GPUICPTools(const camera::Rig& rig);
 
   using ObsLmPair = Track;
 
@@ -62,6 +63,7 @@ public:
                    const std::vector<ObsLmPair>& tracks, std::vector<Vector3T>& landmarks) const;
 
 private:
+  float min_landmark_depth_ = 0.1f;
   mutable GPUArrayPinned<float> pinned_photometric_;
   mutable GPUArrayPinned<float> pinned_point_to_point_;
   mutable GPUArrayPinned<Track> pinned_tracks_{2000};
