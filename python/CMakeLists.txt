@@ -69,6 +69,7 @@ install(FILES ${CUVSLAM_LIBRARY} DESTINATION .)
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.py
     DESTINATION .
 )
 

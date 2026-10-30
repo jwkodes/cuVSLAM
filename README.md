@@ -46,6 +46,50 @@ landmarks at or behind it are rejected.
 Build this fork to use the new argument; an upstream binary wheel does not
 contain it. No learned trackers, matchers or new dependencies are required.
 
+## Export camera trajectories for cuSfM
+
+The Python helper `cuvslam.trajectory.export_trajectory_csv` writes the pose CSV
+accepted by pyCuSFM's existing `generate_frame_meta` tool. Export final optimized
+poses after tracking, with an image record for each camera at each pose timestamp:
+
+```python
+from cuvslam.trajectory import TrajectoryImage, export_trajectory_csv
+
+images = [
+    TrajectoryImage(timestamp_ns=stamp, camera_index=0,
+                    image_name="left/000001.png", image_id="0",
+                    camera_params_id="0", synced_sample_id="1"),
+    TrajectoryImage(timestamp_ns=stamp, camera_index=1,
+                    image_name="right/000001.png", image_id="1",
+                    camera_params_id="1", synced_sample_id="1"),
+]
+export_trajectory_csv("poses.csv", tracker.slam.get_all_slam_poses(), rig, images)
+```
+
+The helper composes `world_from_camera = world_from_rig @ rig_from_camera` for
+both cameras. It preserves image names/IDs and exports `qw,qx,qy,qz,tx,ty,tz`,
+plus camera/sample IDs and microsecond timestamps. Nanoseconds are converted
+with integer rounding; an image's optional `timestamp_us` retains an existing
+source timestamp. Omitted synchronized sample IDs become `sample_<timestamp_ns>`;
+explicit IDs must be nonempty and cannot be `"0"`, which pyCuSFM treats as unset.
+Every image must match a pose timestamp exactly. Missing or
+duplicate poses/images and invalid transforms are rejected, without replacing
+an existing output. Set `overwrite=True` only when replacement is intended.
+
+Translations keep the input units; use meters for cuSfM. Camera intrinsics and
+stereo calibration remain a separate input to the metadata generator. The helper
+does not interpolate poses, select keyframes or align/reset the world frame.
+Convert the CSV with the existing pyCuSFM tool and your camera calibration:
+
+```bash
+python -m pycusfm.generate_frame_meta --poses poses.csv \
+  --config calibration.yaml --output input/frames_meta.json
+```
+
+Then set `skip_cuvslam=True` and `override_frames_meta_file` to that metadata
+file in pyCuSFM. This uses the exported poses without replacing cuSfM's bundled
+cuVSLAM binary or libraries.
+
 ## Table of Contents
 
 - [Tracking modes](#tracking-modes)
