@@ -34,6 +34,7 @@ from . import pycuvslam as _core
 
 # Python helper functions for file-based config loading
 from . import utils
+from .config import CuVSLAMConfig, NativeCuVSLAMConfig
 
 # # Explicit exports for better IntelliSense
 __all__ = [
@@ -41,6 +42,8 @@ __all__ = [
     'Slam',
     'Tracker',
     'utils',
+    'CuVSLAMConfig',
+    'NativeCuVSLAMConfig',
     'get_version',
     'set_verbosity',
     'warm_up_gpu',
