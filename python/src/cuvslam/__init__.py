@@ -68,9 +68,12 @@ from . import _cuvslam as _core
 
 # Python helper functions for file-based config loading
 from . import utils
+from .config import CuVSLAMConfig, NativeCuVSLAMConfig
 
 # # Explicit exports for better IntelliSense
 __all__ = [
+    'CuVSLAMConfig',
+    'NativeCuVSLAMConfig',
     'Odometry',
     'Slam',
     'Tracker',

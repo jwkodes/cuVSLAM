@@ -46,6 +46,105 @@ landmarks at or behind it are rejected.
 Build this fork to use the new argument; an upstream binary wheel does not
 contain it. No learned trackers, matchers or new dependencies are required.
 
+## Unified Python configuration
+
+`CuVSLAMConfig` groups startup settings in a Python object or YAML/JSON file.
+It currently supports stereo and RGB-D; the direct SDK APIs remain available for
+other sensor modes. Calibration and frame I/O remain separate inputs.
+
+```python
+from cuvslam import CuVSLAMConfig
+
+config = CuVSLAMConfig(
+    input_mode="stereo",
+    execution_mode="offline",
+    rig={"min_landmark_depth": 0.01},
+    odometry={
+        "min_depth": 0.01,
+        "rectified_stereo_camera": True,
+        "use_denoising": False,
+    },
+)
+tracker = config.create_tracker(cameras)  # calibrated SDK Camera objects
+```
+
+The same settings can be read from `cuvslam.yaml`:
+
+```yaml
+input_mode: stereo
+execution_mode: offline
+enable_slam: true
+rig:
+  min_landmark_depth: 0.01
+odometry:
+  min_depth: 0.01
+  rectified_stereo_camera: true
+  use_denoising: false
+slam: {}
+```
+
+```python
+config = CuVSLAMConfig.from_file("cuvslam.yaml")  # .yml and .json also supported
+tracker = config.create_tracker(cameras)
+config.to_file("requested-config.json")  # existing files are preserved
+```
+
+`input_mode` chooses the sensor inputs, not how frames are obtained:
+
+| Value | Input | Native odometry mode |
+|---|---|---|
+| `stereo` | At least two calibrated cameras | `Multicamera` |
+| `rgbd` | RGB plus depth aligned with a supplied camera | `RGBD` |
+
+`execution_mode` coordinates both optimization settings and the native Tracker mode:
+
+| Value | `async_sba` | SLAM `sync_mode` | Scheduling |
+|---|---|---|---|
+| `realtime` (default) | `True` | `False` | Optimization runs in background threads |
+| `offline` | `False` | `True` | Scheduled optimization runs in the calling thread |
+
+These names describe scheduling, not live-camera versus video-file input. Synchronous
+execution does not guarantee bitwise determinism, and later loop closures can still
+correct earlier poses. An explicit threading flag that contradicts `execution_mode`
+is rejected. Set `enable_slam=False` for odometry only; leave `slam` empty in that case.
+
+For RGB-D, pass the left camera and aligned depth through your input loop. For example,
+this configuration matches uint16 depths encoded at 10000 units per meter (0.1 mm):
+
+```yaml
+input_mode: rgbd
+execution_mode: offline
+rig:
+  min_landmark_depth: 0.01
+odometry:
+  use_denoising: false
+  rectified_stereo_camera: false
+  rgbd_settings:
+    depth_camera_id: 0
+    depth_scale_factor: 10000.0
+    enable_depth_stereo_tracking: false
+```
+
+`depth_camera_id` defaults to zero in this helper. Always match `depth_scale_factor`
+to the supplied encoding; the SDK default is retained if it is omitted. A configuration
+does not generate depth or rectify images. For stereo, set `rectified_stereo_camera`
+only when the actual inputs satisfy the SDK's rectified-pair requirements.
+
+The `rig`, `odometry` and `slam` sections use the native constructor option names.
+`rig` accepts `min_landmark_depth`; calibrated cameras are passed to `create_tracker`.
+Omitted/null native options retain SDK defaults, except the mode-derived fields.
+Enum names such as `multicam_mode: precision` and `loop_closure_mode: LSI` are accepted.
+Unknown top-level keys are rejected when loading. Native option names/types are checked
+by their constructors before a Tracker is created; misspelled settings are not ignored.
+
+For inspection or separate Odometry/Slam construction, `config.to_native(cameras)`
+returns a `NativeCuVSLAMConfig` with `rig`, `odometry`, `slam` and `tracker_mode`.
+Each call builds fresh SDK configuration objects. The declarative configuration owns
+an immutable copy of its settings; modifying the input dictionaries has no effect.
+`to_dict()` and `to_file()` save the requested settings, not every resolved SDK default.
+Pin the SDK build/version when reproducing runs. Existing native constructors and the
+older `utils` loaders continue to work independently.
+
 ## Table of Contents
 
 - [Tracking modes](#tracking-modes)
