@@ -31,6 +31,42 @@ class TestTracking(unittest.TestCase):
         imu = vslam.ImuCalibration()
         self.rig = vslam.Rig(cameras, [imu])
 
+    def test_native_odometry_allows_other_python_threads(self):
+        import sys
+        import threading
+        import time
+
+        images, _ = data.ImageGenerator(self.rig.cameras).generate_zoomed_images(0)
+        odometry = vslam.Odometry(self.rig, vslam.Odometry.Config(async_sba=False))
+        odometry.track(0, images)  # Initialize CUDA before measuring thread progress.
+        ready, go, stop = threading.Event(), threading.Event(), threading.Event()
+        progress = [0]
+
+        def observe():
+            ready.set()
+            go.wait()
+            while not stop.is_set():
+                progress[0] += 1
+                time.sleep(0)
+
+        observer = threading.Thread(target=observe)
+        observer.start()
+        self.assertTrue(ready.wait(3))
+        old_interval = sys.getswitchinterval()
+        try:
+            # Exclude ordinary interpreter time slicing. Only native calls below
+            # can let the observer acquire the GIL; inputs are already prepared.
+            sys.setswitchinterval(1000)
+            go.set()
+            for i in range(1, 30):
+                odometry.track(i * 40_000_000, images)
+            observed = progress[0]
+        finally:
+            stop.set()
+            sys.setswitchinterval(old_interval)
+            observer.join()
+        self.assertGreater(observed, 0)
+
     def test_init_arguments(self):
         # accept partial, positional & keyword arguments
         _ = vslam.Tracker(self.rig, TrackerMode.OdometryOnlyRealtime, vslam.Odometry.Config())

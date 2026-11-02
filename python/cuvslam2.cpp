@@ -716,6 +716,9 @@ NB_MODULE(pycuvslam, m) {
                                               : Odometry::ImageSet();
             auto depth_set = depths.has_value() ? ImageSetFromNDArrays(depths.value(), timestamp, ArrayType::Depth)
                                                 : Odometry::ImageSet();
+            // Array conversion needs Python; native tracking does not. Keep the
+            // input ndarray owners alive while capture/other Python threads run.
+            nb::gil_scoped_release release;
             return self.Track(image_set, mask_set, depth_set, internals.has_value() ? &*internals : nullptr);
           },
           nb::arg("timestamp"), nb::arg("images"), nb::arg("masks") = nb::none(), nb::arg("depths") = nb::none(),
@@ -1023,6 +1026,7 @@ NB_MODULE(pycuvslam, m) {
       .def(nb::init<const Rig&, const std::vector<uint8_t>&, const Slam::Config&>(), nb::arg("rig"),
            nb::arg("primary_cameras"), nb::arg("config") = Slam::Config{})
       .def("track", &Slam::Track, nb::arg("state"), nb::arg("gt_pose") = nullptr,
+           nb::call_guard<nb::gil_scoped_release>(),
            "Update SLAM pose based on Odometry state and past SLAM loop closures.\n\n"
            "This method should be called after each successful Odometry.track() call.\n"
            "Parameters:\n"

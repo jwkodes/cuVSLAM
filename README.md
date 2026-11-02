@@ -190,6 +190,15 @@ Then set `skip_cuvslam=True` and `override_frames_meta_file` to that metadata
 file in pyCuSFM. This uses the exported poses without replacing cuSfM's bundled
 cuVSLAM binary or libraries.
 
+## Python capture threads
+
+`Odometry.track()` and `Slam.track()` release Python's GIL during native processing,
+allowing a Python capture thread to continue. Array conversion and result conversion
+still run with the GIL held. Calls remain synchronous; this does not enable async
+SBA or change optimization settings. Serialize all access to each tracker instance
+and keep input buffers unchanged until its call returns. Final export and destruction
+must wait for outstanding tracking calls.
+
 ## Table of Contents
 
 - [Tracking modes](#tracking-modes)
