@@ -507,25 +507,50 @@ NB_MODULE(pycuvslam, m) {
       });
 
   nb::class_<Odometry::Config>(odom_cls, "Config", "Odometry configuration parameters")
-      // WARNING: the order of init arguments in this definition must coincide with the order in the structure
-      .def(nb::init<Odometry::MulticameraMode, Odometry::OdometryMode, bool, bool, bool, bool, bool, bool, bool, bool,
-                    float, std::string_view, bool, const Odometry::RGBDSettings&, const Odometry::MultisensorSettings&,
-                    float, float>(),
-           nb::kw_only(), nb::arg("multicam_mode") = Odometry::Config{}.multicam_mode,
-           nb::arg("odometry_mode") = Odometry::Config{}.odometry_mode, nb::arg("use_gpu") = Odometry::Config{}.use_gpu,
-           nb::arg("async_sba") = Odometry::Config{}.async_sba,
-           nb::arg("use_motion_model") = Odometry::Config{}.use_motion_model,
-           nb::arg("use_denoising") = Odometry::Config{}.use_denoising,
-           nb::arg("rectified_stereo_camera") = Odometry::Config{}.rectified_stereo_camera,
-           nb::arg("enable_observations_export") = kPyDefaultEnableObservationsExport,
-           nb::arg("enable_landmarks_export") = kPyDefaultEnableLandmarksExport,
-           nb::arg("enable_final_landmarks_export") = Odometry::Config{}.enable_final_landmarks_export,
-           nb::arg("max_frame_delta_s") = Odometry::Config{}.max_frame_delta_s,
-           nb::arg("debug_dump_directory") = Odometry::Config{}.debug_dump_directory,
-           nb::arg("debug_imu_mode") = Odometry::Config{}.debug_imu_mode,
-           nb::arg("rgbd_settings") = Odometry::Config{}.rgbd_settings,
-           nb::arg("multisensor_settings") = Odometry::Config{}.multisensor_settings,
-           nb::arg("min_depth") = Odometry::Config{}.min_depth, nb::arg("max_depth") = Odometry::Config{}.max_depth)
+      // Resolve nested settings per call, avoiding reference cycles from
+      // bound instances and enum values stored as constructor defaults.
+      .def(
+          "__init__",
+          [](Odometry::Config* self, std::optional<Odometry::MulticameraMode> multicam_mode,
+             std::optional<Odometry::OdometryMode> odometry_mode, bool use_gpu, bool async_sba, bool use_motion_model,
+             bool use_denoising, bool rectified_stereo_camera, bool enable_observations_export,
+             bool enable_landmarks_export, bool enable_final_landmarks_export, float max_frame_delta_s,
+             std::string_view debug_dump_directory, bool debug_imu_mode,
+             const std::optional<Odometry::RGBDSettings>& rgbd_settings,
+             const std::optional<Odometry::MultisensorSettings>& multisensor_settings, float min_depth,
+             float max_depth) {
+            const Odometry::Config defaults{};
+            new (self) Odometry::Config{multicam_mode.value_or(defaults.multicam_mode),
+                                        odometry_mode.value_or(defaults.odometry_mode),
+                                        use_gpu,
+                                        async_sba,
+                                        use_motion_model,
+                                        use_denoising,
+                                        rectified_stereo_camera,
+                                        enable_observations_export,
+                                        enable_landmarks_export,
+                                        enable_final_landmarks_export,
+                                        max_frame_delta_s,
+                                        debug_dump_directory,
+                                        debug_imu_mode,
+                                        rgbd_settings.value_or(defaults.rgbd_settings),
+                                        multisensor_settings.value_or(defaults.multisensor_settings),
+                                        min_depth,
+                                        max_depth};
+          },
+          nb::kw_only(), nb::arg("multicam_mode") = nb::none(), nb::arg("odometry_mode") = nb::none(),
+          nb::arg("use_gpu") = Odometry::Config{}.use_gpu, nb::arg("async_sba") = Odometry::Config{}.async_sba,
+          nb::arg("use_motion_model") = Odometry::Config{}.use_motion_model,
+          nb::arg("use_denoising") = Odometry::Config{}.use_denoising,
+          nb::arg("rectified_stereo_camera") = Odometry::Config{}.rectified_stereo_camera,
+          nb::arg("enable_observations_export") = kPyDefaultEnableObservationsExport,
+          nb::arg("enable_landmarks_export") = kPyDefaultEnableLandmarksExport,
+          nb::arg("enable_final_landmarks_export") = Odometry::Config{}.enable_final_landmarks_export,
+          nb::arg("max_frame_delta_s") = Odometry::Config{}.max_frame_delta_s,
+          nb::arg("debug_dump_directory") = Odometry::Config{}.debug_dump_directory,
+          nb::arg("debug_imu_mode") = Odometry::Config{}.debug_imu_mode, nb::arg("rgbd_settings") = nb::none(),
+          nb::arg("multisensor_settings") = nb::none(), nb::arg("min_depth") = Odometry::Config{}.min_depth,
+          nb::arg("max_depth") = Odometry::Config{}.max_depth)
       .def_rw("multicam_mode", &Odometry::Config::multicam_mode, "See :class:`Odometry.MulticameraMode`")
       .def_rw("odometry_mode", &Odometry::Config::odometry_mode, "See :class:`Odometry.OdometryMode`")
       .def_rw("use_gpu", &Odometry::Config::use_gpu, "Enable to use GPU acceleration")
