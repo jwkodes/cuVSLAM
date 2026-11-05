@@ -46,7 +46,16 @@ void AsyncSlam::Run_worker() {
       // aborted
       return;
     }
+    {
+      std::lock_guard guard(idle_mutex_);
+      processing_ = true;
+    }
     ProcessInput_worker();
+    {
+      std::lock_guard guard(idle_mutex_);
+      processing_ = false;
+    }
+    idle_condition_.notify_all();
   }
 }
 

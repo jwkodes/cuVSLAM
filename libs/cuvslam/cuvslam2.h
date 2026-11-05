@@ -960,6 +960,15 @@ public:
   void GetAllSlamPoses(std::vector<PoseStamped>& poses, uint32_t max_poses_count = 0) const;
 
   /**
+   * Wait for queued SLAM work and in-flight loop closure/pose graph optimization to finish.
+   * Call after the last Track(), before reading final poses or destroying SLAM.
+   * Returns immediately in synchronous mode. Does not schedule additional optimization or wait for
+   * Odometry's independent SBA worker. Do not submit work, destroy SLAM, or call from a SLAM callback
+   * concurrently with this method.
+   */
+  void WaitUntilIdle();
+
+  /**
    * Save SLAM database (map) to folder asynchronously.
    * This folder will be created, if it does not exist.
    * Contents of the folder will be overwritten.

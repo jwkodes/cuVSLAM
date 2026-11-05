@@ -103,6 +103,16 @@ config.to_file("requested-config.json")  # existing files are preserved
 | `realtime` (default) | `True` | `False` | Optimization runs in background threads |
 | `offline` | `False` | `True` | Scheduled optimization runs in the calling thread |
 
+When consuming `Odometry` and `Slam` separately in asynchronous mode, call
+`slam.wait_until_idle()` after the last `slam.track(state)` and before reading
+final poses or destroying SLAM. For `Tracker`, use
+`tracker.slam.wait_until_idle()`. This waits for queued SLAM work and in-flight loop
+closure/pose graph optimization; it does not schedule extra optimization or
+wait for odometry's independent SBA worker. Do not submit more work, destroy
+SLAM, or call this method from a SLAM callback concurrently. The method releases
+the Python GIL while waiting and returns immediately in synchronous mode.
+Build the native library and binding together to use this new API.
+
 These names describe scheduling, not live-camera versus video-file input. Synchronous
 execution does not guarantee bitwise determinism, and later loop closures can still
 correct earlier poses. An explicit threading flag that contradicts `execution_mode`

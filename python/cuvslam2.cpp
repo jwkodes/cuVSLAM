@@ -1033,6 +1033,11 @@ NB_MODULE(pycuvslam, m) {
            "    state: Odometry state containing all tracking data\n"
            "    gt_pose: Optional ground truth pose. Should be provided if `gt_align_mode` is enabled, otherwise "
            "should be None.")
+      .def("wait_until_idle", &Slam::WaitUntilIdle, nb::call_guard<nb::gil_scoped_release>(),
+           "Wait for queued SLAM work, including in-flight loop closure and pose graph optimization.\n"
+           "Call after the last track() and before reading final poses. Synchronous mode returns immediately.\n"
+           "Does not wait for Odometry SBA. Do not submit work, destroy SLAM, or invoke from its callbacks "
+           "concurrently.")
       .def("get_pose", &Slam::GetPose,
            "Get the current SLAM rig pose in the world frame.\n\n"
            "Returns the most recent pose computed by SLAM. Before the first keyframe is processed the pose is the\n"

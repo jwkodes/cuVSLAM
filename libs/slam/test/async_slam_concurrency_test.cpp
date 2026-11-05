@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -232,6 +233,41 @@ TEST(AsyncSlam, TrackResultCanRunWhileLocalizeInMapIsInFlight) {
     ASSERT_TRUE(cv.wait_for(lock, 30s, [&] { return localization_finished; }));
     EXPECT_FALSE(localization_succeeded);
   }
+}
+
+TEST(AsyncSlam, WaitUntilIdleIncludesInFlightCommandsAfterQueueIsEmpty) {
+  std::unique_ptr<cuvslam::camera::ICameraModel> camera;
+  const auto rig = MakeSingleCameraRig(camera);
+  cuvslam::slam::AsyncSlamOptions options;
+  options.use_gpu = false;
+  options.reproduce_mode = false;
+  options.loop_closure_solver_type = cuvslam::slam::LoopClosureSolverType::kDummy;
+  std::promise<void> started;
+  std::promise<void> release;
+  auto released = release.get_future();
+  cuvslam::slam::AsyncSlam slam(rig, {0}, options);
+  slam.WaitUntilIdle();  // empty worker
+  slam.LocalizeInMap(
+      "/tmp/cuvslam_missing_wait_until_idle_map", 1'000, cuvslam::Isometry3T::Identity(), {},
+      MakeLocalizationSettings(),
+      [&] {
+        started.set_value();
+        released.wait();
+      },
+      [](const auto&) {});
+  const auto status = started.get_future().wait_for(5s);
+  if (status != std::future_status::ready) {
+    release.set_value();
+    FAIL() << "worker did not start";
+  }
+  // The command is already popped, but the worker is still inside its callback.
+  auto waiting = std::async(std::launch::async, [&] { slam.WaitUntilIdle(); });
+  const auto before_release = waiting.wait_for(50ms);
+  release.set_value();  // always release the worker before asserting
+  EXPECT_EQ(before_release, std::future_status::timeout);
+  ASSERT_EQ(waiting.wait_for(5s), std::future_status::ready);
+  waiting.get();
+  slam.WaitUntilIdle();  // repeated finalization
 }
 
 }  // namespace test::slam

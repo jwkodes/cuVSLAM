@@ -241,6 +241,14 @@ void AsyncSlam::ProcessInputSynchronously() {
   }
 }
 
+void AsyncSlam::WaitUntilIdle() {
+  if (reproduce_mode_) {
+    return;  // synchronous calls already completed their work
+  }
+  std::unique_lock lock(idle_mutex_);
+  idle_condition_.wait(lock, [this] { return !processing_ && input_queue_.IsEmpty(); });
+}
+
 // stop thread
 void AsyncSlam::Stop() {
   Shutdown();

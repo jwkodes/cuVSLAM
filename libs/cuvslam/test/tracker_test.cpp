@@ -379,3 +379,16 @@ TEST_F(TrackerTest, MultisensorModeRequiresCunlsBuild) {
   }
 }
 #endif
+
+TEST(SlamWaitUntilIdle, EmptySyncAndAsyncMapsCanBeFinalized) {
+  for (const bool sync_mode : {true, false}) {
+    Slam::Config config;
+    config.sync_mode = sync_mode;
+    Slam slam(MakeStereoRig(), {0, 1}, config);
+    slam.WaitUntilIdle();
+    slam.WaitUntilIdle();
+    std::vector<cuvslam::PoseStamped> poses;
+    slam.GetAllSlamPoses(poses);
+    EXPECT_TRUE(poses.empty());
+  }
+}

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <functional>
 #include <limits>
 #include <map>
@@ -81,6 +82,9 @@ public:
 
   void ProcessInputSynchronously();  // for "blocking" = reproduce_mode without launching background thread
   void Stop();
+  // Call after the producer stops; waits for queued and in-flight work, including loop closure/PGO.
+  // Must not be called from the worker thread or concurrently with submission/Stop().
+  void WaitUntilIdle();
 
   void TrackResult(FrameId frameId, int64_t timestamp_ns, const odom::IVisualOdometry::VOFrameStat& stat,
                    const sof::Images& images, const Isometry3T& delta);
@@ -171,6 +175,9 @@ private:
   AsyncSlamLCTelemetry last_telemetry_;  // cache of the telemetry last popped from telemetry_queue_
 
   // --- Shared between the caller's thread and the background worker thread (see async_slam_worker.cpp) ---
+  std::mutex idle_mutex_;
+  std::condition_variable idle_condition_;
+  bool processing_ = false;  // protected by idle_mutex_; includes work after the queue becomes empty
   mutable std::mutex slam_mutex_;
   std::unique_ptr<LocalizerAndMapper> slam_;  // protected by slam_mutex_
   Tail tail_;                                 // thread-safe

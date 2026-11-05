@@ -1194,6 +1194,8 @@ void Slam::GetAllSlamPoses(std::vector<PoseStamped>& poses, uint32_t max_poses_c
   }
 }
 
+void Slam::WaitUntilIdle() { impl->async_slam_->WaitUntilIdle(); }
+
 void Slam::SaveMap(const std::string_view& folder_name, std::function<void(bool success)> callback) const {
   impl->async_slam_->CopyToDatabase(std::string{folder_name}, callback);
 }
